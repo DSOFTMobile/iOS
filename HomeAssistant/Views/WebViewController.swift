@@ -247,7 +247,8 @@ class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, U
         self.navigationController?.setNavigationBarHidden(true, animated: false)
 
         if let connectionInfo = Current.settingsStore.connectionInfo,
-            let webviewURL = connectionInfo.webviewURL() {
+            let webviewURL = connectionInfo.webviewURL(),
+            webView.url == nil {
             let myRequest: URLRequest
 
             if Current.settingsStore.restoreLastURL,
