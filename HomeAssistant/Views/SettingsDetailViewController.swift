@@ -15,6 +15,7 @@ import PromiseKit
 import RealmSwift
 import Firebase
 import CoreMotion
+import NotificationCenter
 
 // swiftlint:disable:next type_body_length
 class SettingsDetailViewController: FormViewController, TypedRowControllerType {
@@ -28,7 +29,7 @@ class SettingsDetailViewController: FormViewController, TypedRowControllerType {
     var doneButton: Bool = false
 
     private let realm = Current.realm()
-
+    private var notificationTokens: [NotificationToken] = []
     private var reorderingRows: [String: BaseRow] = [:]
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -159,6 +160,14 @@ class SettingsDetailViewController: FormViewController, TypedRowControllerType {
                             prefs.set(val, forKey: "locationUpdateOnNotification")
                         }
                     })
+
+                +++ Section(header: nil, footer: L10n.SettingsDetails.Location.NewOneShot.description)
+                <<< SwitchRow {
+                    $0.title = L10n.SettingsDetails.Location.NewOneShot.title
+                    $0.value = Current.settingsStore.useNewOneShotLocation
+                }.onChange { row in
+                    Current.settingsStore.useNewOneShotLocation = row.value ?? false
+                }
 
             let zoneEntities = self.realm.objects(RLMZone.self).map { $0 }
             for zone in zoneEntities {
@@ -403,6 +412,17 @@ class SettingsDetailViewController: FormViewController, TypedRowControllerType {
         case "actions":
             self.title = L10n.SettingsDetails.Actions.title
             let actions = realm.objects(Action.self).sorted(byKeyPath: "Position")
+
+            notificationTokens.append(actions.observe { change in
+                switch change {
+                case .error: break
+                case .initial(let results), .update(let results, deletions: _, insertions: _, modifications: _):
+                    NCWidgetController().setHasContent(
+                        !results.isEmpty,
+                        forWidgetWithBundleIdentifier: Constants.BundleID.appending(".TodayWidget")
+                    )
+                }
+            })
 
             let infoBarButtonItem = Constants.helpBarButtonItem
 
